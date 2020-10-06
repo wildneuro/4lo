@@ -1,0 +1,51 @@
+@startuml
+
+title **API/BE: 4-Layered Onion Architecture**
+
+box "Client Side"
+        actor user1 as "User1"
+        entity client as "Web App"
+end box
+
+box "SpectaRX"
+        entity nginx as "Nginx"
+        entity s7enp as "ServiceAPI Endpoint"
+        entity s7hnd as "ServiceAPI Handler"
+        entity s7log as "ServiceAPI Logic"
+        entity s7sto as "ServiceAPI Storage"
+
+        database storage as "Storage"
+end box
+
+box "External System"
+        entity extsys as "External System"
+end box
+
+autonumber
+
+== Basic Flow ==
+user1 -> client : Click a button on the form
+
+client -> nginx : Find the appropriate Service by the URI (`http://Bla.com/api/v1/s7`)
+
+nginx -> s7enp : HTTP Request Pass Through
+s7enp -> s7hnd : HTTP Request Pass Through
+s7hnd -> s7log : Model Populated with data
+s7log -> s7sto : Model Populated with data
+
+s7log -> extsys : gRPC or HTTP or Pure Protobuf
+s7log <- extsys : gRPC or HTTP
+
+s7sto -> storage : `INSERT/SELECT/UPDATE/DELETE/etc SQL commands`
+s7sto <- storage : OK
+
+s7log <- s7sto : OK SQL is finished
+s7hnd <- s7log : OK Logic is finished return Modeled Object
+s7enp <- s7hnd : Marshal Modeled Object into JSON
+nginx <- s7enp : Send JSON via HTTP back to the Nginx
+
+client <- nginx : Send data back to the client
+
+user1 <- client : 200 OK Result
+
+@enduml
